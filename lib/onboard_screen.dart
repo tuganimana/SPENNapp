@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:introduction_screen/introduction_screen.dart';
 import 'package:SPENNapp/home_screen.dart';
-import 'package:SPENNapp/register_screen.dart';
+import 'package:SPENNapp/signin_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OnBoardScreen extends StatelessWidget {
@@ -32,7 +32,7 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
   void _onIntroEnd(context) {
     // Nvigate to registration screen
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => Register()),
+      MaterialPageRoute(builder: (_) => Login()),
     );
   }
 
@@ -71,21 +71,8 @@ class _OnBoardingPageState extends State<OnBoardingPage> {
         ),
         PageViewModel(
           title: "Save and Earn",
-          body: "Another beautiful body text for this example onboarding",
+          body: "With SPENN you can start earning interest rate",
           image: _buildImage('spenn.png'),
-          footer: RaisedButton(
-            onPressed: () {
-              introKey.currentState?.animateScroll(0);
-            },
-            child: const Text(
-              'FooButton',
-              style: TextStyle(color: Colors.white),
-            ),
-            color: Colors.lightBlue,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-          ),
           decoration: pageDecoration,
         ),
       ],

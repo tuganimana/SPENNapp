@@ -1,7 +1,14 @@
+import 'package:SPENNapp/home_screen.dart';
+import 'package:SPENNapp/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:SPENNapp/api/api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Login extends StatefulWidget {
   Login({Key key}) : super(key: key);
@@ -16,9 +23,11 @@ class _LoginState extends State<Login> {
   TextEditingController _phoneTextEditController = new TextEditingController();
   String phoneCode = "250";
   bool isLoading = false;
+  final passwordController = TextEditingController();
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomPadding: false,
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       body: Column(
@@ -31,7 +40,7 @@ class _LoginState extends State<Login> {
               children: <Widget>[
                 Padding(
                   padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.20,
+                    top: MediaQuery.of(context).size.height * 0.10,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -51,19 +60,31 @@ class _LoginState extends State<Login> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
-                              Text(
-                                "Get started,",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 18.0,
-                                ),
-                              ),
-                              Text(
-                                "Create an Account",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18.0,
-                                  color: Colors.black.withOpacity(0.4),
+                              Center(
+                                child: Column(
+                                  children: [
+                                    SizedBox(
+                                      height: 10,
+                                    ),
+                                    Text(
+                                      "Get started,",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 18.0,
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      height: 10,
+                                    ),
+                                    Text(
+                                      "Get account for free",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 18.0,
+                                        color: Colors.black.withOpacity(0.4),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               Padding(
@@ -152,7 +173,7 @@ class _LoginState extends State<Login> {
                                                               .none)),
                                             ),
                                             inputFormatters: [
-                                              new FilteringTextInputFormatter(
+                                              new BlacklistingTextInputFormatter(
                                                 new RegExp('[\\.|\\,|\\-|\\ ]'),
                                               ),
                                             ],
@@ -163,6 +184,10 @@ class _LoginState extends State<Login> {
                                   ),
                                 ),
                               ),
+                              SizedBox(
+                                height: 10.0,
+                              ),
+                              textPassword("Password/Pincode", Icons.lock),
                               Container(
                                 margin: EdgeInsets.symmetric(vertical: 25.0),
                                 child: ButtonTheme(
@@ -182,14 +207,7 @@ class _LoginState extends State<Login> {
                                         setState(() {
                                           isLoading = true;
                                         });
-                                        // _sendVerificationCode(context);
-                                        // Navigator.pushAndRemoveUntil(
-                                        //   context,
-                                        //   MaterialPageRoute(
-                                        //     builder: (context) => HomePage(),
-                                        //   ),
-                                        //   ModalRoute.withName("/homepage"),
-                                        // );
+                                        _login();
                                       }
                                     },
                                     child: !isLoading
@@ -207,6 +225,49 @@ class _LoginState extends State<Login> {
                                   ),
                                 ),
                               ),
+                              SizedBox(
+                                height: 10.0,
+                              ),
+                              Center(
+                                child: Text(
+                                  " Don't you have an Account",
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 14.0),
+                                ),
+                              ),
+                              Container(
+                                margin: EdgeInsets.symmetric(vertical: 25.0),
+                                child: ButtonTheme(
+                                  minWidth: MediaQuery.of(context).size.width,
+                                  child: OutlineButton(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.all(
+                                          Radius.circular(10.0),
+                                        ),
+                                      ),
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 10.0),
+                                      color: Colors.deepOrangeAccent,
+                                      onPressed: () {
+                                        // if (!isLoading) {
+                                        //   setState(() {
+                                        //     isLoading = true;
+                                        //   });
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                              builder: (_) => Register()),
+                                        );
+                                        // }
+                                      },
+                                      child: Text(
+                                        'Signup',
+                                        style: TextStyle(
+                                            color: Colors.teal,
+                                            fontSize: 18.0,
+                                            fontWeight: FontWeight.bold),
+                                      )),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -220,5 +281,63 @@ class _LoginState extends State<Login> {
         ],
       ),
     );
+  }
+
+  TextField textPassword(String title, IconData icon) => TextField(
+        // duhamagare controller
+
+        obscureText: true,
+        style: TextStyle(color: Colors.teal),
+        controller: passwordController,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          labelText: "Enter password",
+          border: OutlineInputBorder(),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 16.0, horizontal: 15.0),
+        ),
+      );
+
+  void _login() async {
+    setState(() {
+      isLoading = true;
+    });
+    var code = phoneCode;
+    var tel = _phoneTextEditController.text;
+    var _tel = "$code${int.parse(tel)}";
+    var data = {
+      'username': _tel,
+      'password': passwordController.text,
+    };
+//
+    var res = await CallApi().postData(data, 'token-auth/');
+    var body = json.decode(res.body);
+
+    print(body['token']);
+
+    if (body['success'] == 'Successful') {
+      //kubika data dufite
+      SharedPreferences kubika = await SharedPreferences.getInstance();
+      kubika.setString('token', body['token']);
+      kubika.setString('user', json.encode(body['user']));
+
+      Navigator.push(
+          context, new MaterialPageRoute(builder: (context) => HomeScreen()));
+
+      print("You have successfull logged in");
+    } else {
+      _scaffoldKey.currentState.showSnackBar(
+        new SnackBar(
+          backgroundColor: Colors.redAccent.shade200,
+          duration: Duration(seconds: 3),
+          content: Text('Invalid password or username !'),
+        ),
+      );
+    }
+
+    setState(() {
+      isLoading = false;
+    });
   }
 }

@@ -1,7 +1,15 @@
+import 'package:SPENNapp/home_screen.dart';
+import 'package:SPENNapp/signin_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:SPENNapp/api/api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:rflutter_alert/rflutter_alert.dart';
 
 class Register extends StatefulWidget {
   Register({Key key}) : super(key: key);
@@ -19,9 +27,22 @@ class _RegisterState extends State<Register> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final fullnameController = TextEditingController();
+
+  showMessage(msg) {
+    final snackbar = SnackBar(
+      content: Text(msg),
+      action: SnackBarAction(
+        label: 'Close',
+        onPressed: () {},
+      ),
+    );
+    Scaffold.of(context).showSnackBar(snackbar);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomPadding: false,
       key: _scaffoldKey,
       backgroundColor: Colors.white,
       body: Column(
@@ -34,7 +55,7 @@ class _RegisterState extends State<Register> {
               children: <Widget>[
                 Padding(
                   padding: EdgeInsets.only(
-                    top: MediaQuery.of(context).size.height * 0.20,
+                    top: MediaQuery.of(context).size.height * 0.10,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
@@ -57,6 +78,9 @@ class _RegisterState extends State<Register> {
                               Center(
                                 child: Column(
                                   children: [
+                                    SizedBox(
+                                      height: 10,
+                                    ),
                                     Text(
                                       "Get started,",
                                       style: TextStyle(
@@ -84,14 +108,9 @@ class _RegisterState extends State<Register> {
                                   right: 1.0,
                                   top: 20.0,
                                 ),
-                                child: Text(
-                                  "Telephone",
-                                  textAlign: TextAlign.left,
-                                  style: Theme.of(context).textTheme.bodyText1,
-                                ),
                               ),
                               Card(
-                                elevation: 2.0,
+                                elevation: 0.0,
                                 margin: EdgeInsets.only(top: 10.0),
                                 shape: RoundedRectangleBorder(
                                     side: BorderSide(
@@ -177,11 +196,14 @@ class _RegisterState extends State<Register> {
                                   ),
                                 ),
                               ),
-                              // Add Input for fullname
-                              textEmail("Email/Phonenumber",
-                                  Icons.supervised_user_circle),
                               SizedBox(
-                                height: 30.0,
+                                height: 10.0,
+                              ),
+                              // Add Input for fullname
+                              textFullname(
+                                  'Fullname', Icons.supervised_user_circle),
+                              SizedBox(
+                                height: 10.0,
                               ),
                               textPassword("Password/Pincode", Icons.lock),
                               //end input
@@ -204,23 +226,68 @@ class _RegisterState extends State<Register> {
                                         setState(() {
                                           isLoading = true;
                                         });
-                                        // _sendVerificationCode(context);
-                                        // Navigator.pushAndRemoveUntil(
-                                        //   context,
-                                        //   MaterialPageRoute(
-                                        //     builder: (context) => HomePage(),
-                                        //   ),
-                                        //   ModalRoute.withName("/homepage"),
-                                        // );
                                       }
+                                      _Registration();
                                     },
                                     child: !isLoading
                                         ? Text(
-                                            'Next',
+                                            'Signup',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 18.0,
                                             ),
+                                          )
+                                        : SpinKitThreeBounce(
+                                            color: Colors.white,
+                                            size: 15.0,
+                                          ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                height: 5.0,
+                              ),
+                              Center(
+                                child: Text(
+                                  " Do you have an Account?",
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 14.0),
+                                ),
+                              ),
+                              SizedBox(
+                                height: 5.0,
+                              ),
+                              Container(
+                                margin: EdgeInsets.symmetric(vertical: 25.0),
+                                child: ButtonTheme(
+                                  minWidth: MediaQuery.of(context).size.width,
+                                  child: OutlineButton(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(10.0),
+                                      ),
+                                    ),
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 10.0),
+                                    color: Colors.deepOrangeAccent,
+                                    onPressed: () {
+                                      // if (!isLoading) {
+                                      //   setState(() {
+                                      //     isLoading = true;
+                                      //   });
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                            builder: (_) => Login()),
+                                      );
+                                      // }
+                                    },
+                                    child: !isLoading
+                                        ? Text(
+                                            'Login',
+                                            style: TextStyle(
+                                                color: Colors.teal,
+                                                fontSize: 18.0,
+                                                fontWeight: FontWeight.bold),
                                           )
                                         : SpinKitThreeBounce(
                                             color: Colors.white,
@@ -244,37 +311,90 @@ class _RegisterState extends State<Register> {
     );
   }
 
-  TextField textEmail(String title, IconData icon) => TextField(
-        //controller ya email
-
-        obscureText: false,
-        style: TextStyle(color: Colors.white70),
-        controller: emailController,
-        decoration: InputDecoration(
-            hintText: title,
-            hintStyle: TextStyle(color: Colors.white70),
-            icon: Icon(icon)),
-      );
-
   TextField textPassword(String title, IconData icon) => TextField(
         // duhamagare controller
 
         obscureText: true,
-        style: TextStyle(color: Colors.white70),
+        style: TextStyle(color: Colors.teal),
         controller: passwordController,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
         decoration: InputDecoration(
-            hintText: title,
-            hintStyle: TextStyle(color: Colors.white70),
-            icon: Icon(icon)),
+          labelText: "Enter password",
+          border: OutlineInputBorder(),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 16.0, horizontal: 15.0),
+        ),
       );
 
   TextField textFullname(String title, IconData icon) => TextField(
         obscureText: false,
-        style: TextStyle(color: Colors.white70),
+        style: TextStyle(color: Colors.teal),
         controller: fullnameController,
+        textInputAction: TextInputAction.done,
         decoration: InputDecoration(
-            hintText: title,
-            hintStyle: TextStyle(color: Colors.white70),
-            icon: Icon(icon)),
+          labelText: "Enter Fullname",
+          border: OutlineInputBorder(),
+          contentPadding:
+              EdgeInsets.symmetric(vertical: 16.0, horizontal: 15.0),
+        ),
       );
+
+  void _Registration() async {
+    setState(() {
+      isLoading = true;
+    });
+    var code = phoneCode;
+    var tel = _phoneTextEditController.text;
+    var _tel = "$code${int.parse(tel)}";
+    var data = {
+      'first_name': fullnameController.text,
+      'last_name': fullnameController.text,
+      'username': _tel,
+      'password': passwordController.text,
+    };
+//
+    var res = await CallApi().postData(data, 'users/create');
+    var body = json.decode(res.body);
+    print(_tel);
+    print(body);
+    var bodresult = body['created'];
+    print(bodresult);
+
+    if (bodresult == 'successful') {
+      // showMessage("Account have been created!");
+      setState(() {
+        isLoading = false;
+      });
+      _scaffoldKey.currentState.showSnackBar(
+        new SnackBar(
+          backgroundColor: Colors.greenAccent.shade200,
+          duration: Duration(seconds: 3),
+          content: Text('Account Have sucessful created!'),
+        ),
+      );
+    } else {
+      setState(() {
+        isLoading = false;
+      });
+      _scaffoldKey.currentState.showSnackBar(
+        new SnackBar(
+          backgroundColor: Colors.redAccent.shade200,
+          duration: Duration(seconds: 3),
+          content: Text('Account creation failed or username exists!'),
+        ),
+      );
+      // showMessage("account failed to be created/user already exist!");
+    }
+  }
+
+  Widget FadeAlertAnimation(BuildContext context, Animation<double> animation,
+      Animation<double> secondaryAnimation, Widget child) {
+    return Align(
+      child: FadeTransition(
+        opacity: animation,
+        child: child,
+      ),
+    );
+  }
 }
